@@ -1,0 +1,10 @@
+Fecha,Mes,Categoria,Subcategoria,Importe,Metodo_Pago,Notas
+2025-12-01,December,Ocio,Suscripciones,9.99,Tarjeta Personal,Gasto Fijo Automático
+2025-12-01,December,Servicios,Internet,2.99,Tarjeta Personal,Gasto Fijo Automático
+2025-12-03,December,Comida,Glovo/Delivery,17.14,Cobee,
+2025-12-05,December,Comida,Restaurante,54.7,Cobee,Ramen Chonmage
+2025-12-05,December,Comida,Restaurante,3.6,Cobee,Ramen Chonmage
+2025-12-06,December,Comida,Restaurante,50.5,Cobee,Casa Pancho
+2025-12-06,December,Comida,Restaurante,34.7,Cobee,Canadio Santander
+2025-12-08,December,Transporte,Metro/Bus,10.0,Cobee,Tarjeta Metro
+2025-12-08,December,Comida,Glovo/Delivery,9.97,Cobee,Uber
