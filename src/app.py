@@ -11,12 +11,12 @@ ARCHIVO_CONFIG = "config/config.json"
 
 # --- LISTAS DE DATOS ---
 CATEGORIAS_GASTOS = {
-    "Comida": ["Supermercado", "Restaurante", "Glovo/Delivery"],
-    "Transporte": ["Gasolina", "Metro/Bus", "Taxi/Uber", "Mantenimiento"],
-    "Ocio": ["Bar", "Cine", "Fiesta", "Suscripciones", "Viajes"],
-    "Servicios": ["Luz", "Agua", "Internet", "Teléfono"],
-    "Vivienda": ["Alquiler", "Hipoteca", "Reparaciones"],
-    "Salud": ["Farmacia", "Médico", "Gimnasio"]
+    "Comida": ["Supermercado", "Restaurante", "Glovo/Delivery", "Otros"],
+    "Transporte": ["Gasolina", "Metro/Bus", "Taxi/Uber", "Mantenimiento", "Otros"],
+    "Ocio": ["Bar", "Cine", "Fiesta", "Suscripciones", "Viajes", "Otros"],
+    "Servicios": ["Luz", "Agua", "Internet", "Teléfono", "Otros"],
+    "Vivienda": ["Alquiler", "Hipoteca", "Reparaciones", "Otros"],
+    "Salud": ["Farmacia", "Médico", "Gimnasio", "Otros"]
 }
 
 # Nuevas opciones para ingresos
@@ -98,16 +98,24 @@ def procesar_gastos_fijos():
         df.to_csv(ARCHIVO_DATOS, index=False)
 
 def crear_gauge(categoria, gasto_real, presupuesto):
-    # Color de la barra
+    # Color de la barra (Igual que antes)
     color_barra = "#2ecc71" if gasto_real <= presupuesto else "#e74c3c"
     
-    # Creamos el gráfico
+    ref_trucada = (2 * gasto_real) - presupuesto
+
+    # Creamos el gráfico con el MODO ORIGINAL
     fig = go.Figure(go.Indicator(
-        mode = "gauge+number+delta",
+        mode = "gauge+number+delta", # Mantenemos el modo original
         value = gasto_real,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': categoria, 'font': {'size': 17}}, # Fuente reducida un poco
-        delta = {'reference': presupuesto, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
+        title = {'text': categoria, 'font': {'size': 17}}, # Título nativo visible y tamaño original
+        
+        delta = {
+            'reference': ref_trucada, 
+            'increasing': {'color': "#2ecc71"}, 
+            'decreasing': {'color': "#e74c3c"}
+        },
+        
         gauge = {
             'axis': {'range': [None, max(presupuesto, gasto_real)], 'tickwidth': 1, 'tickcolor': "darkblue"},
             'bar': {'color': color_barra},
@@ -124,8 +132,6 @@ def crear_gauge(categoria, gasto_real, presupuesto):
             }
         }
     ))
-    
-    # AJUSTE CLAVE: Más altura y más margen superior (t=60)
     fig.update_layout(height=270, margin=dict(l=20, r=20, t=60, b=20))
     return fig
 
@@ -145,7 +151,6 @@ with tab1:
     st.title("💸 Mi Situación Financiera")
     
     if not df.empty:
-        # Filtro Mes
         meses_disponibles = df["Mes"].unique()
         meses_disponibles = [m for m in meses_disponibles if m]
         
@@ -163,7 +168,7 @@ with tab1:
             ingresos_extra = df_ingresos["Importe"].sum()
             
             salario_bruto = config["salario_bruto"]
-            base_imponible = salario_bruto + gastos_cobee 
+            base_imponible = salario_bruto - gastos_cobee 
             impuestos = base_imponible * (config["irpf_porcentaje"] / 100)
             ss = salario_bruto * (config["seguridad_social_porcentaje"] / 100)
             salario_neto_estimado = base_imponible - impuestos - ss
@@ -217,61 +222,92 @@ with tab1:
 with tab2:
     st.header("Registrar Movimiento")
     
+    # Definimos la función que se ejecutará AL PULSAR el botón (Callback)
+    def guardar_callback(fecha_val, cat_val, sub_val, metodo_val, tipo_val):
+        # 1. Recuperamos importe y notas desde el session_state (usando sus keys)
+        importe_val = st.session_state.nuevo_importe
+        notas_val = st.session_state.nueva_nota
+        
+        if importe_val > 0:
+            # Lógica de signo
+            if tipo_val == "🔴 Gasto":
+                importe_final = -abs(importe_val)
+            else:
+                importe_final = abs(importe_val)
+
+            # Construimos el objeto
+            nuevo = {
+                "Fecha": fecha_val,
+                "Mes": fecha_val.strftime("%B"), # Ojo: esto guardará el mes en idioma del sistema
+                "Categoria": cat_val,
+                "Subcategoria": sub_val,
+                "Importe": importe_final,
+                "Metodo_Pago": metodo_val,
+                "Notas": notas_val
+            }
+            
+            # Guardamos
+            guardar_gasto(nuevo)
+            
+            # --- AQUÍ SÍ PODEMOS LIMPIAR ---
+            # Como esto se ejecuta antes de recargar la página, es legal modificar el estado
+            st.session_state.nuevo_importe = 0.0
+            st.session_state.nueva_nota = ""
+            
+            # Guardamos un mensaje de éxito en el estado para mostrarlo tras la recarga
+            st.session_state.mensaje_exito = f"{tipo_val.split()[1]} guardado correctamente!"
+        else:
+            st.session_state.mensaje_error = "El importe debe ser mayor a 0"
+
+    # --- INTERFAZ ---
+    
+    # Mostramos mensajes pendientes (si existen del click anterior)
+    if "mensaje_exito" in st.session_state:
+        st.success(st.session_state.mensaje_exito)
+        del st.session_state.mensaje_exito # Lo borramos para que no salga siempre
+    if "mensaje_error" in st.session_state:
+        st.error(st.session_state.mensaje_error)
+        del st.session_state.mensaje_error
+
     tipo_movimiento = st.radio("¿Qué quieres registrar?", ["🔴 Gasto", "🟢 Ingreso"], horizontal=True)
     
-    with st.form("form_movimiento", clear_on_submit=True):
-        col_a, col_b = st.columns(2)
+    col_a, col_b = st.columns(2)
+    
+    # Variables auxiliares para recoger los datos de los inputs que NO tienen key
+    cat_sel = ""
+    sub_sel = ""
+    metodo = ""
+    
+    with col_a:
+        fecha = st.date_input("Fecha", datetime.today())
         
-        # Variables que rellenaremos según el if
-        cat_sel = ""
-        sub_sel = ""
-        metodo = ""
+        if tipo_movimiento == "🔴 Gasto":
+            cat_sel = st.selectbox("Categoría", list(CATEGORIAS_GASTOS.keys()))
+            sub_sel = st.selectbox("Subcategoría", CATEGORIAS_GASTOS[cat_sel])
+        else:
+            cat_sel = "Ingreso"
+            sub_sel = st.selectbox("Origen del dinero", ORIGENES_INGRESOS)
+            metodo = sub_sel # En ingreso, el método es el origen
+    
+    with col_b:
+        if tipo_movimiento == "🔴 Gasto":
+            metodo = st.radio("Método de Pago", ["Tarjeta Personal", "Cobee"], horizontal=True)
+        else:
+            pass
         
-        with col_a:
-            fecha = st.date_input("Fecha", datetime.today())
-            
-            if tipo_movimiento == "🔴 Gasto":
-                cat_sel = st.selectbox("Categoría", list(CATEGORIAS_GASTOS.keys()))
-                sub_sel = st.selectbox("Subcategoría", CATEGORIAS_GASTOS[cat_sel])
-            else:
-                # Lógica para INGRESOS
-                cat_sel = "Ingreso" # Categoría interna fija
-                sub_sel = st.selectbox("Origen del dinero", ORIGENES_INGRESOS)
-                metodo = sub_sel # Guardamos el origen también como método para referencia
-        
-        with col_b:
-            if tipo_movimiento == "🔴 Gasto":
-                metodo = st.radio("Método de Pago", ["Tarjeta Personal", "Cobee"], horizontal=True)
-            else:
-                pass
-            
-            importe = st.number_input("Importe (€)", min_value=0.0, format="%.2f")
-            notas = st.text_input("Notas / Concepto", placeholder="Ej: Regalo cumpleaños, Cena...")
+        # IMPORTANTE: Los inputs que queremos borrar deben tener KEY
+        st.number_input("Importe (€)", min_value=0.0, format="%.2f", key="nuevo_importe")
+        st.text_input("Notas / Concepto", placeholder="Ej: Regalo cumpleaños...", key="nueva_nota")
 
-        btn_guardar = st.form_submit_button("Guardar Movimiento", use_container_width=True)
+    # BOTÓN CON CALLBACK
+    # Pasamos las variables que NO están en session_state (fecha, cats) como argumentos (args)
+    st.button(
+        "Guardar Movimiento", 
+        use_container_width=True,
+        on_click=guardar_callback,
+        args=(fecha, cat_sel, sub_sel, metodo, tipo_movimiento)
+    )
 
-        if btn_guardar:
-            if importe > 0:
-                if tipo_movimiento == "🔴 Gasto":
-                    importe_final = -abs(importe)
-                else:
-                    importe_final = abs(importe)
-
-                nuevo = {
-                    "Fecha": fecha,
-                    "Mes": fecha.strftime("%B"),
-                    "Categoria": cat_sel,
-                    "Subcategoria": sub_sel,
-                    "Importe": importe_final,
-                    "Metodo_Pago": metodo,
-                    "Notas": notas
-                }
-                guardar_gasto(nuevo)
-                st.success(f"{tipo_movimiento.split()[1]} guardado correctamente!")
-                st.rerun()
-            else:
-                st.error("El importe debe ser mayor a 0")
-            
     st.markdown("---")
     st.subheader("Últimos 10 movimientos")
     

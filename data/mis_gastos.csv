@@ -1,3 +1,9 @@
 Fecha,Mes,Categoria,Subcategoria,Importe,Metodo_Pago,Notas
 2025-12-01,December,Ocio,Suscripciones,-9.99,Tarjeta Personal,Gasto Fijo Automático
 2025-12-01,December,Servicios,Internet,-2.99,Tarjeta Personal,Gasto Fijo Automático
+2025-12-13,December,Vivienda,Reparaciones,-15.0,Tarjeta Personal,
+2025-12-13,December,Ocio,Fiesta,-40.0,Tarjeta Personal,
+2025-12-13,December,Ingreso,Bizum,40.0,Bizum,
+2025-12-13,December,Ingreso,Efectivo,20.0,Efectivo,
+2026-01-01,January,Ocio,Suscripciones,-9.99,Tarjeta Personal,Gasto Fijo Automático
+2026-01-01,January,Servicios,Internet,-2.99,Tarjeta Personal,Gasto Fijo Automático
