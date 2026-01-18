@@ -5,9 +5,24 @@ import json
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- CONFIGURACIÓN DE ARCHIVOS ---
-ARCHIVO_DATOS = "data/mis_gastos.csv"
-ARCHIVO_CONFIG = "config/config.json"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
+ruta_env_datos = os.getenv("RUTA_DATOS")
+ruta_env_config = os.getenv("RUTA_CONFIG")
+
+if ruta_env_datos and os.path.exists(f"{ruta_env_datos}/mis_gastos.csv"):
+    ARCHIVO_DATOS = f"{ruta_env_datos}/mis_gastos.csv"
+else:
+    ARCHIVO_DATOS = "data/mis_gastos.csv"
+
+if ruta_env_config and os.path.exists(f"{ruta_env_config}/config.json"):
+    ARCHIVO_CONFIG = f"{ruta_env_config}/config.json"
+else:
+    ARCHIVO_CONFIG = "config/config.json"
 
 # --- LISTAS DE DATOS ---
 CATEGORIAS_GASTOS = {
@@ -19,7 +34,6 @@ CATEGORIAS_GASTOS = {
     "Salud": ["Farmacia", "Médico", "Gimnasio", "Otros"]
 }
 
-# Nuevas opciones para ingresos
 ORIGENES_INGRESOS = ["Bizum", "Transferencia", "Efectivo", "Regalo", "Venta 2ª Mano", "Otros"]
 
 # --- FUNCIONES DE GESTIÓN DE DATOS ---
@@ -98,17 +112,15 @@ def procesar_gastos_fijos():
         df.to_csv(ARCHIVO_DATOS, index=False)
 
 def crear_gauge(categoria, gasto_real, presupuesto):
-    # Color de la barra (Igual que antes)
     color_barra = "#2ecc71" if gasto_real <= presupuesto else "#e74c3c"
     
     ref_trucada = (2 * gasto_real) - presupuesto
 
-    # Creamos el gráfico con el MODO ORIGINAL
     fig = go.Figure(go.Indicator(
-        mode = "gauge+number+delta", # Mantenemos el modo original
+        mode = "gauge+number+delta",
         value = gasto_real,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': categoria, 'font': {'size': 17}}, # Título nativo visible y tamaño original
+        title = {'text': categoria, 'font': {'size': 17}},
         
         delta = {
             'reference': ref_trucada, 
@@ -136,7 +148,6 @@ def crear_gauge(categoria, gasto_real, presupuesto):
     return fig
 
 # --- INTERFAZ GRÁFICA ---
-
 st.set_page_config(page_title="Mi Finanzas Pro", layout="wide")
 
 procesar_gastos_fijos()
